@@ -15,7 +15,7 @@ interface MongooseCache {
 // Use global object for caching in dev mode
 declare global {
   // Allow global `mongoose` to persist across hot reloads
-  var mongooseCache: MongooseCache;
+  let mongooseCache: MongooseCache;
 }
 
 // Initialize cache if not already
