@@ -1,25 +1,42 @@
-import mongoose from "mongoose";
+import mongoose, { Mongoose } from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI!;
+const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
   throw new Error("Please define the MONGODB_URI environment variable.");
 }
 
-let cached = (global as any).mongoose || { conn: null, promise: null };
+// Define a global type-safe cache interface
+interface MongooseCache {
+  conn: Mongoose | null;
+  promise: Promise<Mongoose> | null;
+}
 
-async function dbConnect() {
-  if (cached.conn) return cached.conn;
+// Use global object for caching in dev mode
+declare global {
+  // Allow global `mongoose` to persist across hot reloads
+  var mongooseCache: MongooseCache;
+}
 
-  if (!cached.promise) {
-    cached.promise = mongoose.connect(MONGODB_URI, {
+// Initialize cache if not already
+const globalCache: MongooseCache = globalThis.mongooseCache || {
+  conn: null,
+  promise: null,
+};
+
+globalThis.mongooseCache = globalCache;
+
+async function dbConnect(): Promise<Mongoose> {
+  if (globalCache.conn) return globalCache.conn;
+
+  if (!globalCache.promise) {
+    globalCache.promise = mongoose.connect(MONGODB_URI || "", {
       bufferCommands: false,
     });
   }
-  cached.conn = await cached.promise;
-  return cached.conn;
-}
 
-(global as any).mongoose = cached;
+  globalCache.conn = await globalCache.promise;
+  return globalCache.conn;
+}
 
 export default dbConnect;
